@@ -123,7 +123,9 @@ int main() {
 
   printf("\nPress CTRL-D to exit\n\n");
   printf("\nPress ENTER to inject error\n\n");
-
+  
+  while(1);
+  /*
   while(fgetc(stdin) != EOF) {// Press Ctrl-D to exit
     printf("Injecting error: \"MQTT_ERROR_SOCKET_ERROR\"");
     client.error = MQTT_ERROR_SOCKET_ERROR;
@@ -136,6 +138,7 @@ int main() {
   exit_example(EXIT_SUCCESS, client.socketfd, &client_daemon);
 
   return 0;
+  */
 }
 
 void reconnect_client(struct mqtt_client *client, void **reconnect_state_vptr) {
