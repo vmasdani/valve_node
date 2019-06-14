@@ -89,6 +89,7 @@ int main() {
   // Initialize wiringPi and relay output pin
   wiringPiSetup();
   pinMode(_relay_pin, OUTPUT);
+  digitalWrite(_relay_pin, _relay_off);
 
   // Reconnecting structure
   struct reconnect_state_t reconnect_state;
