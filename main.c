@@ -12,7 +12,9 @@
  *  Automatic control:
  *  Uses schedule from database to check whether the current time matches the
  *  desired time in the database record.
- *  Checking is done every 30 seconds.
+ *  Checking is done every 30 seconds in the server. This code receives
+ *  data through MQTT, parses the desired watering length, and then 
+ *  finally executes watering control.
  *  Time is synchronized through internet, so the device must be connected 
  *  to internet.
  *  Scheduled control uses JSON for its formatting for parsing purposes.
@@ -26,13 +28,17 @@
  *  /control/ message: 1 (on)
  *  /control/ message: 0 (off)
  *
- *  Below is the pinout of the system:
+ *  Below is the pinout of this system:
  *  RELAY | GPIO6 (WiringPi GPIO7)
  *  
  *  External libraries used:
  *  - WiringOP-Zero by xpertsavenue
  *  - MQTT-C by LiamBindle
  *  - cJSON by DaveGamble
+ *
+ *  Constants are defined in the config/constants.h.
+ *  use getip() to get current IP in wlan0 interface.
+ *
  * */
 
 #include <stdio.h>
@@ -40,6 +46,7 @@
 #include <stdlib.h>
 #include <mqtt.h>
 #include <time.h>
+#include <getip.h>
 #include <cJSON.h>
 #include <wiringPi.h>
 
@@ -65,8 +72,6 @@ void publish_callback(void **unused, struct mqtt_response_publish *published);
 void *client_refresher(void *client);
 // Safely close TCP sockfd and cancels refresher daemon
 void exit_example(int status, int sockfd, pthread_t *client_daemon);
-// Thread to check data time periodically
-void *checkValveSchedule(void);
 
 char *getTime() { // Get current system time
   time_t mytime = time(NULL);
@@ -78,8 +83,9 @@ char *getTime() { // Get current system time
 int main() {
   printf("[%s]", getTime());
   printf("\n===== WATER VALVE SYSTEM =====\n");
-  printf("MQTT CONFIG\nHost: %s\nPort: %s\nTopic: %s\n", _host, _port, _topic);
-  
+  printf("MQTT CONFIG\nHost: %s\nPort: %s\nControl topic: %s\nSched topic: %s\n", 
+         _host, _port, _topic, _topic_sched);
+  printf("Detected IP address: %s\n", getip()); 
   // Initialize wiringPi and relay output pin
   wiringPiSetup();
   pinMode(_relay_pin, OUTPUT);
@@ -193,11 +199,11 @@ void publish_callback(void **unused, struct mqtt_response_publish *published) {
     // Check valve switch status
     if(strcmp(app_msg, "1") == 0) {
       printf("Turning on valve...\n");
-      digitalWrite(_relay_pin, 1);
+      digitalWrite(_relay_pin, _relay_on);
     }
     else if(strcmp(app_msg, "0") == 0) {
       printf("Turning off valve...\n");
-      digitalWrite(_relay_pin, 0);
+      digitalWrite(_relay_pin, _relay_off);
     }
     else {
       printf("Message does not match any of the control status.\n");
@@ -219,12 +225,25 @@ void publish_callback(void **unused, struct mqtt_response_publish *published) {
         printf("Message is not a number!\n");
       }
       else {
-        printf("Length: %d\n", watering_length->valueint);
+        int seconds_to_water = watering_length->valueint;
+        int counter;
+        printf("Now watering for %d seconds...\n", seconds_to_water);      
+        
+        digitalWrite(_relay_pin, _relay_on);
+        for(counter = 0; counter <= seconds_to_water; counter++) {
+          printf("%d seconds have passed\n", counter);
+          sleep(1);
+        }
+        digitalWrite(_relay_pin, _relay_off);
+        printf("Done watering! Closing valve...\n");
       }
     }
 
     cJSON_Delete(json); // Cleanup JSON object
     sleep(2);
+  }
+  else {
+    printf("Topic irrelevant.\n");
   }
 
   free(topic_name);
