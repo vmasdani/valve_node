@@ -35,6 +35,7 @@
  *  - WiringOP-Zero by xpertsavenue
  *  - MQTT-C by LiamBindle
  *  - cJSON by DaveGamble
+ *  - wPi_soft_lcd by electronicayciencia
  *
  *  Constants are defined in the config/constants.h.
  *  use getip() to get current IP in wlan0 interface.
@@ -49,6 +50,7 @@
 #include <getip.h>
 #include <cJSON.h>
 #include <wiringPi.h>
+#include <soft_lcd.h>
 
 #include "templates/posix_sockets.h"
 #include "config/constants.h"
@@ -80,12 +82,34 @@ char *getTime() { // Get current system time
   return time_str;
 }
 
+char ipaddr[15]; 
+lcd_t *lcd;
+
 int main() {
   printf("[%s]", getTime());
   printf("\n===== WATER VALVE SYSTEM =====\n");
   printf("MQTT CONFIG\nHost: %s\nPort: %s\nControl topic: %s\nSched topic: %s\n", 
-         _host, _port, _topic, _topic_sched);
-  printf("Detected IP address: %s\n", getip()); 
+         _host, _port, _topic, _topic_sched);  
+
+  // init lcd
+  lcd = lcd_create(9, 8, 0x27, 2);
+
+  if(lcd == NULL) {
+    printf("Cannot set-up LCD.\n");
+  }
+
+  if(getip() != NULL) {
+    printf("Detected IP address: %s\n", getip());
+    strncpy(ipaddr, getip(), 15);
+    lcd_print(lcd, ipaddr);
+  }
+  else {
+    printf("No IP Address detected!\n");
+    lcd_print(lcd, "NO IP");
+  }
+  lcd_pos(lcd, 1, 0);
+  lcd_print(lcd, "OFF");
+
   // Initialize wiringPi and relay output pin
   wiringPiSetup();
   pinMode(_relay_pin, OUTPUT);
@@ -125,8 +149,7 @@ int main() {
   printf("\nPress CTRL-D to exit\n\n");
   printf("\nPress ENTER to inject error\n\n");
   
-  while(1);
-  /*
+  // while(1);
   while(fgetc(stdin) != EOF) {// Press Ctrl-D to exit
     printf("Injecting error: \"MQTT_ERROR_SOCKET_ERROR\"");
     client.error = MQTT_ERROR_SOCKET_ERROR;
@@ -137,9 +160,9 @@ int main() {
 
   // Exit safely
   exit_example(EXIT_SUCCESS, client.socketfd, &client_daemon);
+  lcd_destroy(lcd);
 
   return 0;
-  */
 }
 
 void reconnect_client(struct mqtt_client *client, void **reconnect_state_vptr) {
@@ -179,6 +202,7 @@ void reconnect_client(struct mqtt_client *client, void **reconnect_state_vptr) {
 void exit_example(int status, int sockfd, pthread_t *client_daemon) {
   if(sockfd != -1) close(sockfd);
   if(client_daemon != NULL) pthread_cancel(*client_daemon);
+  lcd_destroy(lcd);
   exit(status);
 }
 
@@ -204,10 +228,26 @@ void publish_callback(void **unused, struct mqtt_response_publish *published) {
     if(strcmp(app_msg, "1") == 0) {
       printf("Turning on valve...\n");
       digitalWrite(_relay_pin, _relay_on);
+    
+      // lcd write
+      lcd_clear(lcd);
+      lcd_pos(lcd, 0, 0);
+      strncpy(ipaddr, getip(), 15);
+      lcd_print(lcd, ipaddr);
+      lcd_pos(lcd, 1, 0);
+      lcd_print(lcd, "ON");
     }
     else if(strcmp(app_msg, "0") == 0) {
       printf("Turning off valve...\n");
       digitalWrite(_relay_pin, _relay_off);
+    
+      // lcd write
+      lcd_clear(lcd);
+      lcd_pos(lcd, 0, 0);
+      strncpy(ipaddr, getip(), 15);
+      lcd_print(lcd, ipaddr);
+      lcd_pos(lcd, 1, 0);
+      lcd_print(lcd, "OFF");
     }
     else {
       printf("Message does not match any of the control status.\n");
@@ -232,14 +272,30 @@ void publish_callback(void **unused, struct mqtt_response_publish *published) {
         int seconds_to_water = watering_length->valueint;
         int counter;
         printf("Now watering for %d seconds...\n", seconds_to_water);      
-        
+       
+        // lcd write
+        lcd_clear(lcd);
+        lcd_pos(lcd, 0, 0);
+        strncpy(ipaddr, getip(), 15);
+        lcd_print(lcd, ipaddr);
+        lcd_pos(lcd, 1, 0);
+        lcd_print(lcd, "ON");
+
         digitalWrite(_relay_pin, _relay_on);
-        for(counter = 0; counter <= seconds_to_water; counter++) {
+        for(counter = 0; counter < seconds_to_water; counter++) {
           printf("%d seconds have passed\n", counter);
           sleep(1);
         }
         digitalWrite(_relay_pin, _relay_off);
         printf("Done watering! Closing valve...\n");
+      
+        // lcd write
+        lcd_clear(lcd);
+        lcd_pos(lcd, 0, 0);
+        strncpy(ipaddr, getip(), 15);
+        lcd_print(lcd, ipaddr);
+        lcd_pos(lcd, 1, 0);
+        lcd_print(lcd, "OFF");
       }
     }
 
