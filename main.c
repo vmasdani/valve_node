@@ -289,6 +289,13 @@ void publish_callback(void **unused, struct mqtt_response_publish *published) {
         digitalWrite(_relay_pin, _relay_on);
         for(counter = 0; counter < seconds_to_water; counter++) {
           printf("%d seconds have passed\n", counter);
+          // lcd write
+          lcd_clear(lcd);
+          lcd_pos(lcd, 0, 0);
+          strncpy(ipaddr, getip(), 15);
+          lcd_print(lcd, ipaddr);
+          lcd_pos(lcd, 1, 0);
+          lcd_printf(lcd, "%d", seconds_to_water - counter);
           sleep(1);
         }
         digitalWrite(_relay_pin, _relay_off);
