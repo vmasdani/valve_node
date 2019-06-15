@@ -60,6 +60,7 @@ struct reconnect_state_t { // MQTT reconnection state struct. from MQTT-C lib
   const char *port;
   const char *topic;
   const char *topic_sched;
+  const char *topic_poweroff;
   uint8_t *sendbuf;
   size_t sendbufsz;
   uint8_t *recvbuf;
@@ -121,6 +122,7 @@ int main() {
   reconnect_state.port = _port;
   reconnect_state.topic = _topic;
   reconnect_state.topic_sched = _topic_sched;
+  reconnect_state.topic_poweroff = _topic_poweroff;
   uint8_t sendbuf[2048];
   uint8_t recvbuf[1024];
   reconnect_state.sendbuf = sendbuf;
@@ -197,6 +199,7 @@ void reconnect_client(struct mqtt_client *client, void **reconnect_state_vptr) {
   // Subscribe to topic
   mqtt_subscribe(client, reconnect_state->topic, 0); // control topic
   mqtt_subscribe(client, reconnect_state->topic_sched, 0); // schedule topic
+  mqtt_subscribe(client, reconnect_state->topic_poweroff, 0); // schedule topic
 }
 
 void exit_example(int status, int sockfd, pthread_t *client_daemon) {
@@ -218,7 +221,7 @@ void publish_callback(void **unused, struct mqtt_response_publish *published) {
   app_msg[published->application_message_size] = '\0';
 
   // Print the received message
-  printf("[%s] Received msg('%s'): %s\n", getTime(), topic_name, app_msg);
+  printf("[%s] Received message('%s'): %s\n", getTime(), topic_name, app_msg);
 
   /* === TOPIC: control === */
   if(strcmp(topic_name, "control") == 0) {
@@ -301,6 +304,10 @@ void publish_callback(void **unused, struct mqtt_response_publish *published) {
 
     cJSON_Delete(json); // Cleanup JSON object
     sleep(2);
+  }
+  else if(strcmp(topic_name, "poweroff") == 0) {
+    printf("Poweroff topic detected!\n");
+    system("poweroff");
   }
   else {
     printf("Topic irrelevant.\n");
