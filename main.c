@@ -316,6 +316,8 @@ void publish_callback(void **unused, struct mqtt_response_publish *published) {
   }
   else if(strcmp(topic_name, "poweroff") == 0) {
     printf("Poweroff topic detected!\n");
+    digitalWrite(_relay_pin, _relay_off);
+    lcd_destroy(lcd);
     system("poweroff");
   }
   else {
