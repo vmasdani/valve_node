@@ -99,15 +99,15 @@ int main() {
     printf("Cannot set-up LCD.\n");
   }
 
-  if(getip() != NULL) {
-    printf("Detected IP address: %s\n", getip());
-    strncpy(ipaddr, getip(), 15);
-    lcd_print(lcd, ipaddr);
-  }
-  else {
+  while(strcmp(getip(), "") == 0) {
     printf("No IP Address detected!\n");
-    lcd_print(lcd, "NO IP");
+    lcd_clear(lcd);
+    lcd_print(lcd, "NO IP, RETRYING.");
+    sleep(5);
   }
+  
+  lcd_clear(lcd);
+  lcd_print(lcd, getip());
   lcd_pos(lcd, 1, 0);
   lcd_print(lcd, "OFF");
 
@@ -151,7 +151,9 @@ int main() {
   printf("\nPress CTRL-D to exit\n\n");
   printf("\nPress ENTER to inject error\n\n");
   
-  // while(1);
+  while(1);
+  
+  /*
   while(fgetc(stdin) != EOF) {// Press Ctrl-D to exit
     printf("Injecting error: \"MQTT_ERROR_SOCKET_ERROR\"");
     client.error = MQTT_ERROR_SOCKET_ERROR;
@@ -162,7 +164,7 @@ int main() {
 
   // Exit safely
   exit_example(EXIT_SUCCESS, client.socketfd, &client_daemon);
-  lcd_destroy(lcd);
+  */
 
   return 0;
 }
