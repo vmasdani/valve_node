@@ -7,6 +7,7 @@
 #define _topic "control"
 #define _topic_sched "schedule"
 #define _topic_poweroff "poweroff"
+#define _topic_reboot "reboot"
 #define _relay_pin 7 // 7 in wiringPi, 6 in orange pi.
 #define _relay_on 0 // LOW logic triggers the relay on
 #define _relay_off 1 // HIGH logic triggers the relay off

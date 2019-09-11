@@ -61,6 +61,7 @@ struct reconnect_state_t { // MQTT reconnection state struct. from MQTT-C lib
   const char *topic;
   const char *topic_sched;
   const char *topic_poweroff;
+  const char *topic_reboot;
   uint8_t *sendbuf;
   size_t sendbufsz;
   uint8_t *recvbuf;
@@ -75,6 +76,8 @@ void publish_callback(void **unused, struct mqtt_response_publish *published);
 void *client_refresher(void *client);
 // Safely close TCP sockfd and cancels refresher daemon
 void exit_example(int status, int sockfd, pthread_t *client_daemon);
+// IP address polling
+void *ip_poll(void *vargp);
 
 char *getTime() { // Get current system time
   time_t mytime = time(NULL);
@@ -111,6 +114,11 @@ int main() {
   lcd_pos(lcd, 1, 0);
   lcd_print(lcd, "OFF");
 
+  // IP Poll thread
+  pthread_t ip_poll_thread;
+  pthread_create(&ip_poll_thread, NULL, ip_poll, NULL);
+  pthread_join(ip_poll_thread, NULL);
+
   // Initialize wiringPi and relay output pin
   wiringPiSetup();
   pinMode(_relay_pin, OUTPUT);
@@ -123,6 +131,7 @@ int main() {
   reconnect_state.topic = _topic;
   reconnect_state.topic_sched = _topic_sched;
   reconnect_state.topic_poweroff = _topic_poweroff;
+  reconnect_state.topic_reboot = _topic_reboot;
   uint8_t sendbuf[2048];
   uint8_t recvbuf[1024];
   reconnect_state.sendbuf = sendbuf;
@@ -201,7 +210,8 @@ void reconnect_client(struct mqtt_client *client, void **reconnect_state_vptr) {
   // Subscribe to topic
   mqtt_subscribe(client, reconnect_state->topic, 0); // control topic
   mqtt_subscribe(client, reconnect_state->topic_sched, 0); // schedule topic
-  mqtt_subscribe(client, reconnect_state->topic_poweroff, 0); // schedule topic
+  mqtt_subscribe(client, reconnect_state->topic_poweroff, 0); // poweroff topic
+  mqtt_subscribe(client, reconnect_state->topic_reboot, 0); // reboot topic
 }
 
 void exit_example(int status, int sockfd, pthread_t *client_daemon) {
@@ -320,6 +330,12 @@ void publish_callback(void **unused, struct mqtt_response_publish *published) {
     lcd_destroy(lcd);
     system("poweroff");
   }
+  else if(strcmp(topic_name, "poweroff") == 0) {
+    printf("Reboot topic detected!\n");
+    digitalWrite(_relay_pin, _relay_off);
+    lcd_destroy(lcd);
+    system("reboot");
+  }
   else {
     printf("Topic irrelevant.\n");
   }
@@ -333,6 +349,24 @@ void *client_refresher(void *client) {
     mqtt_sync((struct mqtt_client*) client);
     usleep(100000U);
   }
+
+  return NULL;
+}
+
+void *ip_poll(void *vargp) {
+  sleep(10);
+
+  while(strcmp(getip(), "") == 0) {
+    printf("No IP Address detected!\n");
+    lcd_clear(lcd);
+    lcd_print(lcd, "NO IP, RETRYING.");
+    sleep(5);
+  }
+  
+  lcd_clear(lcd);
+  lcd_print(lcd, getip());
+  lcd_pos(lcd, 1, 0);
+  lcd_print(lcd, "OFF");
 
   return NULL;
 }
