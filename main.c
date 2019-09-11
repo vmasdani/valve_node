@@ -330,7 +330,7 @@ void publish_callback(void **unused, struct mqtt_response_publish *published) {
     lcd_destroy(lcd);
     system("poweroff");
   }
-  else if(strcmp(topic_name, "poweroff") == 0) {
+  else if(strcmp(topic_name, "reboot") == 0) {
     printf("Reboot topic detected!\n");
     digitalWrite(_relay_pin, _relay_off);
     lcd_destroy(lcd);
