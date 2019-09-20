@@ -102,12 +102,12 @@ int main() {
 
   if(lcd == NULL) {
     printf("Cannot set-up LCD.\n");
-    syslog(LOG_NOTICE, "Cannot set up LCD.");
+    syslog(LOG_NOTICE "Cannot set up LCD.");
   }
 
   while(strcmp(getip(), "") == 0) {
     printf("No IP Address detected!\n");
-    syslog(LOG_NOTICE, "No IP Address detected!");
+    syslog(LOG_NOTICE "No IP Address detected!");
     lcd_clear(lcd);
     lcd_print(lcd, "NO IP, RETRYING.");
     sleep(5);
@@ -119,13 +119,11 @@ int main() {
   lcd_print(lcd, "OFF");
 
   // IP Poll thread
-  /*
   pthread_t ip_poll_thread;
   pthread_create(&ip_poll_thread, NULL, ip_poll, NULL);
   pthread_join(ip_poll_thread, NULL);
   printf("IP poll thread started!\n");
-  syslog(LOG_NOTICE, "IP Poll thread started!");
-  */
+  syslog(LOG_NOTICE "IP Poll thread started!");
 
   // Initialize wiringPi and relay output pin
   wiringPiSetup();
@@ -159,12 +157,12 @@ int main() {
   pthread_t client_daemon;
   if(pthread_create(&client_daemon, NULL, client_refresher, &client)) {
     fprintf(stderr, "Failed to start client daemon.\n");
-    syslog(LOG_NOTICE, "Failed to start client daemon.");
+    syslog(LOG_NOTICE "Failed to start client daemon.");
     exit_example(EXIT_FAILURE, -1, NULL);
   }
   else {
     printf("Client daemon init success!\n");
-    syslog(LOG_NOTICE, "Client daemon init success!");
+    syslog(LOG_NOTICE "Client daemon init success!");
   }
 
   printf("\nPress CTRL-D to exit\n\n");
@@ -196,7 +194,7 @@ void reconnect_client(struct mqtt_client *client, void **reconnect_state_vptr) {
     printf("reconnect client: called while client was in error state\"%s\"\n",
       mqtt_error_str(client->error)
     );
-    syslog(LOG_NOTICE, "Reconnecting MQTT client...");
+    syslog(LOG_NOTICE "Reconnecting MQTT client...");
   }
 
   // Open new socket
@@ -207,7 +205,7 @@ void reconnect_client(struct mqtt_client *client, void **reconnect_state_vptr) {
   }
   else {
     printf("Init socket success!\n");
-    syslog(LOG_NOTICE, "Init socket success!");
+    syslog(LOG_NOTICE "Init socket success!");
   }
 
   // Reinitialize client
@@ -390,16 +388,16 @@ void *ip_poll(void *vargp) {
       lcd_is_writing = 1;
 
       printf("No IP Address detected!\n");
-      syslog(LOG_NOTICE, "No IP detected");
+      syslog(LOG_NOTICE "No IP detected");
       lcd_clear(lcd);
       lcd_print(lcd, "NO IP, RETRYING.");
-      lcd_is_writing = 0;
-
       sleep(5);
+
+      lcd_is_writing = 0;
     }
     else {
       printf("IP detected! Looking good... %s\n", getip());
-      syslog(LOG_NOTICE, "IP detected");
+      syslog(LOG_NOTICE "IP detected");
 
       while(lcd_is_writing);
       lcd_is_writing = 1;
